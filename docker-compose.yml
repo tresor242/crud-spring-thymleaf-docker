@@ -1,0 +1,62 @@
+services:
+  # --- Base de données MySQL ---
+  db:
+    image: mysql:8.0
+    container_name: db
+    environment:
+
+      MYSQL_ROOT_PASSWORD: root
+      # base créée si elle n'existe pas
+      MYSQL_DATABASE: springthymleaf
+    # auth plugin compatible dev/outils
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    # exposition host:container (host 3307 -> container 3306)
+    ports:
+      - "3307:3306"
+    # persistance des données MySQL
+    volumes:
+      - db_data:/var/lib/mysql
+    # attend que MySQL réponde avant app/pma
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -proot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --- Application Spring Boot ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Connexion interne à MySQL via le hostname du service
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/springthymleaf?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      # Confort dev (voir Flyway/Liquibase pour la prod)
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_THYMELEAF_CACHE: "false"
+    ports:
+      - "8080:8080"
+
+  # --- Console MySQL web ---
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: pma
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8081:80"
+
+# Volume pour la persistance MySQL
+volumes:
+  db_data:

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Patients</title>
+    <!-- Bootstrap via WebJars -->
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.1.3/dist/css/bootstrap.min.css}">
+</head>
+<body>
+<div class="container mt-2">
+    <div class="card">
+        <!-- ======= HEADER ======= -->
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Liste des patients</span>
+            <!-- Bouton pour ouvrir la modale d’ajout -->
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                Ajouter
+            </button>
+        </div>
+
+        <div class="card-body">
+            <!-- Message de succès (flash attribute) -->
+            <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+            <!-- ======= FORMULAIRE DE RECHERCHE ======= -->
+            <form method="get" th:action="@{/index}" class="row g-2 mb-3">
+                <div class="col-auto">
+                    <label class="col-form-label">Mot-clé</label>
+                </div>
+                <div class="col-auto">
+                    <input type="text" name="keyword" th:value="${keyword}" class="form-control">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Chercher</button>
+                </div>
+            </form>
+
+            <!-- ======= TABLEAU DES PATIENTS ======= -->
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>ID</th><th>Nom</th><th>Date</th><th>Malade</th><th>Score</th><th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Boucle Thymeleaf : liste des patients -->
+                <tr th:each="p : ${listPatients}">
+                    <td th:text="${p.id}"></td>
+                    <td th:text="${p.nom}"></td>
+                    <!-- Formatage de la date -->
+                    <td th:text="${p.dateNaissance != null ? #dates.format(p.dateNaissance, 'yyyy-MM-dd') : ''}"></td>
+                    <td th:text="${p.malade}"></td>
+                    <td th:text="${p.score}"></td>
+
+                    <!-- ======= ACTIONS ======= -->
+                    <td class="text-nowrap">
+                        <!-- Bouton MODIFIER : ouvre une modale spécifique à chaque patient -->
+                        <button type="button"
+                                class="btn btn-warning btn-sm me-1"
+                                data-bs-toggle="modal"
+                                th:attr="data-bs-target=${'#editModal-' + p.id}">
+                            Éditer
+                        </button>
+
+                        <!-- Bouton SUPPRIMER : lien vers /delete avec confirmation JS -->
+                        <a onclick="return confirm('Êtes-vous sûr ?')"
+                           class="btn btn-danger btn-sm"
+                           th:href="@{/delete(id=${p.id}, keyword=${keyword}, page=${currentPage})}">
+                            Supprimer
+                        </a>
+
+                        <!-- ===== MODAL D’ÉDITION ===== -->
+                        <div class="modal fade" th:id="${'editModal-' + p.id}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form th:action="@{|/patients/${p.id}|}" method="post">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">
+                                                Modifier le patient #<span th:text="${p.id}"></span>
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                                        </div>
+
+                                        <div class="modal-body">
+                                            <!-- Champs cachés pour contexte pagination/recherche -->
+                                            <input type="hidden" name="id" th:value="${p.id}">
+                                            <input type="hidden" name="page" th:value="${currentPage}">
+                                            <input type="hidden" name="size" value="5">
+                                            <input type="hidden" name="keyword" th:value="${keyword}">
+
+                                            <!-- Champs modifiables -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Nom</label>
+                                                <input class="form-control" name="nom" th:value="${p.nom}" required>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Date de naissance</label>
+                                                <input type="date" class="form-control"
+                                                       name="dateNaissance"
+                                                       th:value="${p.dateNaissance != null ? #dates.format(p.dateNaissance, 'yyyy-MM-dd') : ''}">
+                                            </div>
+
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="malade"
+                                                       th:checked="${p.malade}"
+                                                       th:id="${'malade-' + p.id}">
+                                                <label class="form-check-label" th:for="${'malade-' + p.id}">Malade</label>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Score</label>
+                                                <input type="number" class="form-control" name="score" th:value="${p.score}">
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ===== /MODAL D’ÉDITION ===== -->
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- ======= PAGINATION ======= -->
+            <ul class="nav nav-pills">
+                <li th:each="page,status : ${pages}">
+                    <a th:class="${status.index==currentPage?'btn btn-primary ms-1':'btn btn-outline-primary ms-1'}"
+                       th:text="${status.index}"
+                       th:href="@{/index(page=${status.index}, keyword=${keyword})}">
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL D’AJOUT ===== -->
+<div class="modal fade" id="addPatientModal" tabindex="-1" aria-labelledby="addPatientLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form th:action="@{/patients/save}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addPatientLabel">Ajouter un patient</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Champs cachés pour pagination/recherche -->
+                    <input type="hidden" name="keyword" th:value="${keyword}">
+                    <input type="hidden" name="page" th:value="${currentPage}">
+                    <input type="hidden" name="size" value="5">
+
+                    <!-- Champs du formulaire -->
+                    <div class="mb-3">
+                        <label class="form-label">Nom</label>
+                        <input type="text" class="form-control" name="nom" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Date de naissance</label>
+                        <input type="date" class="form-control" name="dateNaissance">
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="malade" id="add-malade">
+                        <label class="form-check-label" for="add-malade">Malade</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Score</label>
+                        <input type="number" class="form-control" name="score" value="0">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- ===== /MODAL D’AJOUT ===== -->
+
+<!-- JS Bootstrap -->
+<script th:src="@{/webjars/bootstrap/5.1.3/dist/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
